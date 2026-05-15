@@ -99,17 +99,23 @@ function countUserTurns(jsonlPath) {
   } catch { return 0; }
 }
 
-// ─── Check for active packet ──────────────────────────────────────────────────
+// ─── Session ID from JSONL path ───────────────────────────────────────────────
 
-function hasActivePacket() {
-  if (!fs.existsSync(SPAWN_DIR)) return false;
-  return fs.readdirSync(SPAWN_DIR).some(f => f.startsWith('spawn-packet-'));
+function getSessionId(jsonlPath) {
+  return path.basename(jsonlPath, '.jsonl');
 }
 
-function getLatestPacketPath() {
+// ─── Check for active packet (session-scoped) ─────────────────────────────────
+
+function hasActivePacket(sessionId) {
+  if (!fs.existsSync(SPAWN_DIR)) return false;
+  return fs.readdirSync(SPAWN_DIR).some(f => f.startsWith(`spawn-packet-${sessionId}-`));
+}
+
+function getLatestPacketPath(sessionId) {
   if (!fs.existsSync(SPAWN_DIR)) return null;
   const packets = fs.readdirSync(SPAWN_DIR)
-    .filter(f => f.startsWith('spawn-packet-'))
+    .filter(f => f.startsWith(`spawn-packet-${sessionId}-`))
     .map(f => ({ name: f, mtime: fs.statSync(path.join(SPAWN_DIR, f)).mtimeMs }))
     .sort((a, b) => b.mtime - a.mtime);
   return packets.length ? path.join(SPAWN_DIR, packets[0].name) : null;
@@ -117,8 +123,8 @@ function getLatestPacketPath() {
 
 // ─── Auto-save recovery file (shell-only, no Claude needed) ──────────────────
 
-function autoSaveRecovery(timestamp) {
-  const recoveryPath = path.join(SPAWN_DIR, `spawnrecovery-${timestamp}.md`);
+function autoSaveRecovery(sessionId, timestamp) {
+  const recoveryPath = path.join(SPAWN_DIR, `spawnrecovery-${sessionId}-${timestamp}.md`);
 
   // Skip if already saved this threshold crossing
   if (fs.existsSync(recoveryPath)) return recoveryPath;
@@ -138,6 +144,7 @@ function autoSaveRecovery(timestamp) {
 const jsonlPath = findCurrentSession();
 if (!jsonlPath) process.exit(0);
 
+const sessionId = getSessionId(jsonlPath);
 const usage = getLatestUsage(jsonlPath);
 
 if (usage) {
@@ -147,10 +154,10 @@ if (usage) {
   const remaining     = contextWindow - totalContext;
   const modeFlag      = AUTO_MODE === 'a' ? '-a' : '-p';
 
-  // ── Post-compaction recovery: packet exists but context is fresh/low ─────────
-  // Low context% + active packet = we just compacted. Restore automatically.
-  if (hasActivePacket() && pct < WARN_PCT) {
-    const packetPath = getLatestPacketPath();
+  // ── Post-compaction recovery: packet exists for THIS session but context is low
+  // Low context% + session-matching packet = we just compacted. Restore automatically.
+  if (hasActivePacket(sessionId) && pct < WARN_PCT) {
+    const packetPath = getLatestPacketPath(sessionId);
     process.stdout.write(
       `\n` +
       `⚡ ═══════════════════════════════════════════════════════════\n` +
@@ -166,10 +173,10 @@ if (usage) {
   }
 
   if (pct >= CRITICAL_PCT) {
-    if (!hasActivePacket()) {
+    if (!hasActivePacket(sessionId)) {
       // ── Auto-save recovery immediately (shell, no Claude needed) ───────────
       const timestamp    = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19).replace('T', '-');
-      const recoveryPath = autoSaveRecovery(timestamp);
+      const recoveryPath = autoSaveRecovery(sessionId, timestamp);
       const savedMsg     = recoveryPath
         ? `✅ Recovery file auto-saved: ${path.basename(recoveryPath)}`
         : `⚠️  Recovery auto-save failed — run /spawn manually immediately`;
@@ -212,7 +219,7 @@ if (usage) {
   const URG_TURNS  = parseInt(process.env.SPAWN_URGENT_AT || '90', 10);
   const modeFlag   = AUTO_MODE === 'a' ? '-a' : '-p';
 
-  if (turns >= URG_TURNS && !hasActivePacket()) {
+  if (turns >= URG_TURNS && !hasActivePacket(sessionId)) {
     process.stdout.write(
       `\n🚨 SPAWN URGENT [${turns} turns — no token data]\n` +
       `   Run /spawn ${modeFlag} now.\n\n`

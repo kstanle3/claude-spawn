@@ -42,11 +42,12 @@ This returns a JSON blob with: `sessionId`, `projectSlug`, `cwd`, `totalTurns`, 
 
 Generate a timestamp slug: `date +%Y%m%d-%H%M%S`
 
-Set paths:
+Set paths — include session ID so packets never cross-contaminate between sessions:
 ```bash
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-PACKET_FILE=~/.claude/SPAWN/active/spawn-packet-${TIMESTAMP}.md
-RECOVERY_FILE=~/.claude/SPAWN/active/spawnrecovery-${TIMESTAMP}.md
+SESSION_ID=$(node ~/.claude/skills/spawn/bin/spawn-parser.js session-id)
+PACKET_FILE=~/.claude/SPAWN/active/spawn-packet-${SESSION_ID}-${TIMESTAMP}.md
+RECOVERY_FILE=~/.claude/SPAWN/active/spawnrecovery-${SESSION_ID}-${TIMESTAMP}.md
 ```
 
 ---
