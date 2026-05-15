@@ -230,5 +230,5 @@ To install in any Claude Code setup:
 3. Run `/spawn` from any session
 
 ---
-*spawn v1.0 — Designed by Kevin Stanley (Coastal Crew Marine)*
+*spawn v1.0 — Designed by Kevin Stanley*
 *Built with Claude (Anthropic) — github.com/kstanle3*

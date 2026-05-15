@@ -3,7 +3,7 @@
 Self-healing session continuity for Claude Code. When context compacts, the next
 session restores automatically — no warmup, no re-explaining, no lost decisions.
 
-**Designed by Kevin Stanley (Coastal Crew Marine) · Built with Claude (Anthropic)**
+**Designed by Kevin Stanley · Built with Claude (Anthropic)**
 
 ---
 
@@ -246,7 +246,7 @@ exist to bridge one compaction, not to accumulate.
 
 MIT. Use it, modify it, distribute it. If you improve it, share it back.
 
-Attribution appreciated: *"spawn by Kevin Stanley / Coastal Crew Marine, built with Claude"*
+Attribution appreciated: *"spawn by Kevin Stanley, built with Claude"*
 
 ---
 
