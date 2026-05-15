@@ -100,10 +100,12 @@ switch (command) {
       try { fs.unlinkSync(target); } catch {}
       console.log(`[spawn] Recovery file deleted: ${basename}`);
     } else if (basename.startsWith('spawn-packet-')) {
-      // Packet: archive (keep for audit trail)
+      // Packet: archive (keep for audit trail), clean up .fired marker
       if (archiveFile(target)) {
         console.log(`[spawn] Packet archived after read: ${basename}`);
       }
+      const firedMarker = target + '.fired';
+      try { if (fs.existsSync(firedMarker)) fs.unlinkSync(firedMarker); } catch {}
     }
     break;
   }

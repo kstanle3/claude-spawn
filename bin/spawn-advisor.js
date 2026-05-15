@@ -156,19 +156,27 @@ if (usage) {
 
   // ── Post-compaction recovery: packet exists for THIS session but context is low
   // Low context% + session-matching packet = we just compacted. Restore automatically.
+  // Fire the recovery instruction ONCE per packet, then silence until packet is gone.
   if (hasActivePacket(sessionId) && pct < WARN_PCT) {
     const packetPath = getLatestPacketPath(sessionId);
-    process.stdout.write(
-      `\n` +
-      `⚡ ═══════════════════════════════════════════════════════════\n` +
-      `   SPAWN RECOVERY — Context reset detected\n` +
-      `   Read this file NOW to restore full session context:\n` +
-      `   ${packetPath}\n` +
-      `═══════════════════════════════════════════════════════════\n\n` +
-      `MANDATORY: Before responding, read the spawn packet above in full.\n` +
-      `It contains your active task, decisions, mid-flight items, and next action.\n` +
-      `After reading it, respond to the user's message normally.\n\n`
-    );
+    const firedMarker = packetPath + '.fired';
+
+    if (!fs.existsSync(firedMarker)) {
+      // First time seeing this packet — inject recovery and mark as fired
+      fs.writeFileSync(firedMarker, new Date().toISOString());
+      process.stdout.write(
+        `\n` +
+        `⚡ ═══════════════════════════════════════════════════════════\n` +
+        `   SPAWN RECOVERY — Context reset detected\n` +
+        `   Read this file NOW to restore full session context:\n` +
+        `   ${packetPath}\n` +
+        `═══════════════════════════════════════════════════════════\n\n` +
+        `MANDATORY: Before responding, read the spawn packet above in full.\n` +
+        `It contains your active task, decisions, mid-flight items, and next action.\n` +
+        `After reading it, respond to the user's message normally.\n\n`
+      );
+    }
+    // Already fired — stay silent. Packet cleanup happens via PostToolUse on Read.
     process.exit(0);
   }
 
